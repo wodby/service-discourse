@@ -3,6 +3,7 @@
 .idea
 .vscode
 .DS_Store
+log/*
 node_modules
-dist
-tmp
+tmp/*
+vendor/bundle

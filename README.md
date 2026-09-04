@@ -1,72 +1,42 @@
-# Wodby service template
+# Discourse service for Kubernetes on Wodby
 
-This repository is a starter for a Git-backed Wodby service. Wodby imports
-`service.yml` from the selected Git ref and creates a new service revision every
-time you import or update it.
+Build and run [Discourse](https://www.discourse.org/) applications on Kubernetes with Wodby.
 
-The included manifest is intentionally small: it defines a buildable HTTP
-service using the Wodby nginx Helm chart. Replace the example names, image,
-chart, options, and settings with the service you want to publish.
+This service uses the same connected-build model as other Wodby application services. Wodby CI clones the selected Discourse source, builds it on the official `discourse/base` web-only image, and deploys the resulting application image. Wodby does not maintain a separate Discourse runtime image.
 
-## Files
+## Build sources
 
-- `service.yml` - the Wodby service manifest.
-- `Dockerfile` - default Dockerfile content imported into the service build
-  configuration.
-- `.dockerignore` - default Docker ignore content imported into the service
-  build configuration.
+The service offers two upstream build boilerplates:
 
-## Start here
+- Discourse `2026.8` stable
+- Discourse `2026.7` ESR
 
-1. Change `name`, `title`, `icon`, and `labels` in `service.yml`.
-2. Replace `options` with the versions or variants your service supports.
-3. Replace the container `image` and the `helm` chart information.
-4. Keep workload and container names stable after users create app services from
-   this service. Renaming them can break stack and app-level overrides.
-5. Keep `update: manual` until you are ready for Git updates to drive dependent
-   stack updates. Use `update: auto` only when automatic downstream updates are
-   intentional.
+Each boilerplate uses the pipeline in this repository. A compatible fork or custom Discourse source can also be connected directly.
 
-## Build support
+The build installs the selected source's Ruby and JavaScript dependencies, precompiles application assets, and adds the runtime lifecycle required by Wodby. The final image remains derived from the official Discourse base image.
 
-`build.connect: true` lets app services connect a Git repository and build an
-image with Wodby CI. At least one workload container must have `build: true` when
-the service has a `build` section.
+## Runtime model
 
-`build.dockerfile` and `build.dockerignore` point to files in this repository.
-During import, Wodby reads those files and stores their contents in the service
-revision.
+The service runs one stateful Discourse pod containing nginx, Unicorn, and Sidekiq. It requires PostgreSQL, Redis, and SMTP links. Persistent storage is mounted at `/shared` for uploads, backups, logs, and runtime state.
 
-If you also maintain starter application repositories, add them under
-`build.templates`:
+The service deliberately does not support multiple replicas. Horizontal scaling requires separate web and Sidekiq workloads plus shared upload storage and coordinated migrations.
 
-```yaml
-build:
-  dockerfile: Dockerfile
-  dockerignore: .dockerignore
-  connect: true
-  templates:
-  - name: app
-    title: Application starter
-    repo: https://github.com/example/app-starter
-    branch: main
-    default: true
-```
+## Configuration
 
-## Multiple services
+`Administrator email addresses` is required and initializes Discourse developer access. `Notification email address` is optional; when omitted, Discourse derives a default from the primary hostname.
 
-A repository can contain multiple services. Put each service in its own
-directory and add an `index.yml` at the repository root:
+Additional upstream `DISCOURSE_*` settings can be supplied with a variable integration. Database, Redis, and SMTP connection values are owned by service links.
 
-```yaml
-services:
-- api
-- worker
-```
+The SMTP link targets an internal mail transfer agent. STARTTLS is disabled only for that private in-cluster hop; the relay remains responsible for securing and authenticating its external connection.
 
-Each listed directory must contain its own `service.yml`.
+## PostgreSQL
 
-## References
+The linked PostgreSQL database must provide `hstore`, `pg_trgm`, `unaccent`, and `vector`. The Discourse stack configures the standard Wodby PostgreSQL service to create them.
 
-- Service template reference: https://wodby.com/docs/2.0/services/template/
-- Naming rules: https://wodby.com/docs/2.0/naming/
+## Storage and backups
+
+The default `/shared` volume is 20 GiB. The native Discourse backup includes the database and local uploads in one `tar.gz` artifact.
+
+## Upgrades
+
+Upgrade by rebuilding from a newer supported Discourse Git ref. Do not install `docker_manager` or run an in-place application upgrade from the Discourse administration interface.

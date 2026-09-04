@@ -1,61 +1,247 @@
-name: example-service
+name: discourse
+icon: discourse
 type: service
-icon: service
-title: Example Service
-update: manual
-scalable: true
+title: Discourse
+scalable: false
 
 labels:
-- example
-- web
+- discourse
+- forum
 
 options:
-- version: '1.0'
-  tag: '1.29'
+- version: '2026.8'
+  tag: 2.0.20260812-0036-web-only-stable
   default: true
+  eol: '2026-10-27T00:00:00+00:00'
+- version: '2026.7'
+  tag: 2.0.20260812-0036-web-only-stable
+  eol: '2027-03-30T00:00:00+00:00'
 
 endpoints:
-- name: http
+- name: discourse
   main: true
   ports:
   - name: http
     number: 80
     protocol: http
     main: true
+    routeDefaults:
+      request_body_size: 35m
+      request_timeout: 10m
+      backend_request_timeout: 10m
+
+settings:
+- name: developer_emails
+  title: Administrator email addresses
+  description: Comma-separated email addresses that receive initial Discourse administrator access
+  placeholder: admin@example.com
+  required: true
+  var: DISCOURSE_DEVELOPER_EMAILS
+- name: notification_email
+  title: Notification email address
+  description: Optional From address for Discourse system email; its domain should have valid SPF, DKIM, and reverse DNS
+  placeholder: noreply@example.com
+  var: DISCOURSE_NOTIFICATION_EMAIL
 
 env:
-- name: NGINX_VHOST_PRESET
-  value: html
-- name: NGINX_SERVER_ROOT
-  value: /var/www/html
+- name: RAILS_ENV
+  value: production
+- name: DISCOURSE_HOSTNAME
+  value: '{{service.primaryHost}}'
+- name: DISCOURSE_FORCE_HTTPS
+  value: 'true'
+- name: DISCOURSE_SMTP_DOMAIN
+  value: '{{service.primaryHost}}'
+- name: DISCOURSE_SMTP_ENABLE_START_TLS
+  value: 'false'
+- name: MIGRATE_ON_BOOT
+  value: '1'
+- name: PRECOMPILE_ON_BOOT
+  value: '1'
+
+links:
+- name: db
+  title: PostgreSQL
+  required: true
+  env:
+  - name: DISCOURSE_DB_HOST
+    value: '{{link.database.host}}'
+  - name: DISCOURSE_DB_PORT
+    value: '{{link.database.port}}'
+  - name: DISCOURSE_DB_NAME
+    value: '{{link.database.db.name}}'
+  - name: DISCOURSE_DB_USERNAME
+    value: '{{link.database.user.name}}'
+  - name: DISCOURSE_DB_PASSWORD
+    value: '{{link.database.user.password}}'
+    secret: true
+  selectors:
+  - type: db
+    labels:
+    - postgres
+- name: redis
+  title: Redis
+  required: true
+  env:
+  - name: DISCOURSE_REDIS_HOST
+    value: '{{link.host}}'
+  - name: DISCOURSE_REDIS_PORT
+    value: '{{link.port}}'
+  - name: DISCOURSE_REDIS_PASSWORD
+    value: '{{link.tokens.password}}'
+    secret: true
+  selectors:
+  - type: datastore
+    labels:
+    - redis
+- name: sendmail
+  title: Mail transfer agent
+  required: true
+  env:
+  - name: DISCOURSE_SMTP_ADDRESS
+    value: '{{link.host}}'
+  - name: DISCOURSE_SMTP_PORT
+    value: '{{link.port}}'
+  selectors:
+  - type: service
+    labels:
+    - smtpd
+
+integrations:
+- name: variable
+  title: Additional environment variables
+  type: variable
+  required: false
+  multiple: true
+
+volumes:
+- name: data
+  title: Discourse shared data
+  size: 20
+  optional: false
+  helm:
+    labels: persistence.labels
+    values:
+    - name: persistence.enabled
+      value: true
+    - name: persistence.size
+      value: '{{volumes.data.size}}Gi'
+    - name: persistence.storageClass
+      value: '{{volumes.data.storageClassName}}'
+
+backups:
+- name: discourse
+  title: Discourse database and uploads
+  create:
+    args:
+    - make
+    - -f
+    - /usr/local/bin/actions.mk
+    - backup
+    - filepath=/shared/backups/wodby-discourse.tar.gz
+  upload:
+    filepath: /shared/backups/wodby-discourse.tar.gz
+    extension: tar.gz
 
 build:
   dockerfile: Dockerfile
   dockerignore: .dockerignore
   connect: true
+  boilerplates:
+  - name: stable
+    title: Discourse stable
+    repo: https://github.com/discourse/discourse
+    tag: ^2026.8
+    pipeline: pipeline.yml
+    optionVersionConstraint: ^2026.8
+    default: true
+  - name: esr
+    title: Discourse ESR
+    repo: https://github.com/discourse/discourse
+    tag: ^2026.7
+    pipeline: pipeline.yml
+    optionVersionConstraint: ^2026.7
+
+deployment:
+  strategy: rolling
+  minReady: 10s
+  shutdownGracePeriod: 120s
 
 helm:
   name: wodby
-  source: oci://registry-1.docker.io/wodby/nginx
-  chart: oci://registry-1.docker.io/wodby/nginx
+  source: oci://registry-1.docker.io/wodby/stateful
+  chart: oci://registry-1.docker.io/wodby/stateful
   version: 0.2.0
+  valueMappings:
+    replicas: replicaCount
+    fullnameOverride: fullnameOverride
+    serviceAccountName: serviceAccount.name
+    serviceAccountCreate: serviceAccount.create
+    strategy: updateStrategy
+    minReady: minReadySeconds
+    shutdownGracePeriod: terminationGracePeriodSeconds
+  values:
+  - name: containerName
+    value: discourse
+  - name: containerPorts
+    value:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+  - name: service.ports
+    value:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  - name: persistence.mountPath
+    value: /shared
+  - name: startupProbe
+    value:
+      httpGet:
+        path: /srv/status
+        port: http
+      failureThreshold: 90
+      periodSeconds: 10
+      timeoutSeconds: 5
+  - name: readinessProbe
+    value:
+      httpGet:
+        path: /srv/status
+        port: http
+      failureThreshold: 6
+      periodSeconds: 10
+      timeoutSeconds: 5
+  - name: livenessProbe
+    value:
+      httpGet:
+        path: /srv/status
+        port: http
+      failureThreshold: 6
+      periodSeconds: 30
+      timeoutSeconds: 5
 
 workloads:
 - name: main
   selector:
     matchLabels:
       app.kubernetes.io/instance: '{{helm.release}}'
-  kind: deployment
+  kind: statefulset
   primary: true
   helm:
-    labels: commonLabels
-    annotations: commonAnnotations
+    labels: podLabels
+    annotations: podAnnotations
     volumes: extraVolumes
   containers:
-  - name: nginx
-    image: wodby/nginx
+  - name: discourse
+    image: discourse/base
     build: true
     helm:
       resources: resources
-      env: extraEnvVars
+      env: envVars
       mounts: extraVolumeMounts
+      image:
+        registry: image.registry
+        repository: image.repository
+        tag: image.tag
+        pullPolicy: image.pullPolicy
