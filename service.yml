@@ -1,0 +1,61 @@
+name: example-service
+type: service
+icon: service
+title: Example Service
+update: manual
+scalable: true
+
+labels:
+- example
+- web
+
+options:
+- version: '1.0'
+  tag: '1.29'
+  default: true
+
+endpoints:
+- name: http
+  main: true
+  ports:
+  - name: http
+    number: 80
+    protocol: http
+    main: true
+
+env:
+- name: NGINX_VHOST_PRESET
+  value: html
+- name: NGINX_SERVER_ROOT
+  value: /var/www/html
+
+build:
+  dockerfile: Dockerfile
+  dockerignore: .dockerignore
+  connect: true
+
+helm:
+  name: wodby
+  source: oci://registry-1.docker.io/wodby/nginx
+  chart: oci://registry-1.docker.io/wodby/nginx
+  version: 0.2.0
+
+workloads:
+- name: main
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: '{{helm.release}}'
+  kind: deployment
+  primary: true
+  helm:
+    labels: commonLabels
+    annotations: commonAnnotations
+    volumes: extraVolumes
+  containers:
+  - name: nginx
+    image: wodby/nginx
+    build: true
+    helm:
+      resources: resources
+      env: extraEnvVars
+      mounts: extraVolumeMounts
