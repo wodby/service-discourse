@@ -2,6 +2,7 @@ name: discourse
 icon: discourse
 type: service
 title: Discourse
+guidance: GUIDANCE.md
 scalable: false
 
 labels:
