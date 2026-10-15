@@ -10,6 +10,10 @@ jobs:
     steps:
     - clone
     - run: wodby ci init $WODBY_BUILD_ID
-    - run: wodby ci build --build-arg DISCOURSE_GIT_VERSION="$(git rev-parse HEAD)"
+    # Installing Discourse's gems and building its assets takes longer than the
+    # 10-minute default for a single step.
+    - run:
+        script: wodby ci build --build-arg DISCOURSE_GIT_VERSION="$(git rev-parse HEAD)"
+        timeout: 30m
     - run: wodby ci push
     - run: wodby ci deploy
