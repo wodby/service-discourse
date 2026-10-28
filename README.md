@@ -8,12 +8,14 @@ This service uses the same connected-build model as other Wodby application serv
 
 The service offers two upstream build boilerplates:
 
-- Discourse `2026.8` stable
+- Discourse `2026.10` stable
 - Discourse `2026.7` ESR
+
+Each Discourse version option uses a `discourse/base` web-only image whose Ruby and JavaScript dependencies match that release line, so a build installs only what the selected source changes.
 
 Each boilerplate uses the pipeline in this repository. A compatible fork or custom Discourse source can also be connected directly.
 
-The build installs the selected source's Ruby and JavaScript dependencies, precompiles application assets, and adds the runtime lifecycle required by Wodby. The final image remains derived from the official Discourse base image.
+The build installs the selected source's Ruby and JavaScript dependencies, downloads the frontend that Discourse publishes for the release, compresses the assets, and adds the runtime lifecycle required by Wodby. A source whose frontend differs from the release, such as a fork with frontend changes, builds its own frontend instead, which takes considerably longer. The final image remains derived from the official Discourse base image.
 
 ## Runtime model
 

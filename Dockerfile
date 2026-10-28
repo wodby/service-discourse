@@ -30,7 +30,6 @@ RUN set -e; \
       -exec rm -rf {} +; \
     cp -a /tmp/discourse-source/. /var/www/discourse/; \
     rm -rf /tmp/discourse-source /var/www/discourse/.git; \
-    chown -R discourse:discourse /var/www/discourse; \
     cd /var/www/discourse; \
     sudo -H -E -u discourse git init -q; \
     sudo -H -E -u discourse git add frontend package.json pnpm-lock.yaml; \
@@ -45,8 +44,28 @@ RUN set -e; \
     sudo -H -E -u discourse bundle install --jobs "$(nproc --ignore=1)" --retry 3; \
     sudo -H -E -u discourse bundle clean; \
     sudo -H -E -u discourse /bin/bash -c 'CI=1 pnpm install --frozen-lockfile && pnpm prune'; \
+    # Discourse publishes the built frontend of every release. The archive's
+    # BUILD_INFO.json holds the tree hash of the frontend sources it was built
+    # from, so the asset task below reuses it only when this checkout's sources
+    # match, and builds the frontend itself otherwise. Its own download needs
+    # the upstream .git, which the build context does not include.
+    prebuilt="https://get.discourse.org/discourse-assets/${discourse_version}-$(printf '%.8s' "${DISCOURSE_GIT_VERSION}")/production.tar.gz"; \
+    if [ "${DISCOURSE_GIT_VERSION}" != unknown ] && curl -fsSL --retry 3 -o /tmp/assets.tar.gz "${prebuilt}"; then \
+      mkdir /tmp/assets; \
+      tar -xzf /tmp/assets.tar.gz -C /tmp/assets; \
+      rm -rf frontend/discourse/dist app/assets/generated; \
+      mv /tmp/assets/core frontend/discourse/dist; \
+      mv /tmp/assets/plugins app/assets/generated; \
+      chown -R discourse:discourse frontend/discourse/dist app/assets/generated; \
+      rm -rf /tmp/assets /tmp/assets.tar.gz; \
+    else \
+      echo "No pre-built assets at ${prebuilt}; building the frontend."; \
+    fi; \
     sudo -H -E -u discourse env DISCOURSE_DOWNLOAD_PRE_BUILT_ASSETS=0 bundle exec rake assets:precompile:build; \
-    rm -rf .git
+    rm -rf .git; \
+    # Digest and compress the assets once here instead of on every start.
+    # Only the CSS needs the database, so the container compiles it on start.
+    sudo -H -E -u discourse env SKIP_EMBER_CLI_COMPILE=1 SKIP_DB_AND_REDIS=1 bundle exec rake assets:precompile
 
 RUN set -e; \
     cd /var/www/discourse; \
@@ -162,7 +181,7 @@ if [[ "${MIGRATE_ON_BOOT:-1}" == "1" ]]; then
   sudo -H -E -u discourse bundle exec rake db:migrate
 fi
 if [[ "${PRECOMPILE_ON_BOOT:-1}" == "1" ]]; then
-  sudo -H -E -u discourse env SKIP_EMBER_CLI_COMPILE=1 bundle exec rake themes:update assets:precompile
+  sudo -H -E -u discourse bundle exec rake themes:update assets:precompile:css maxminddb:refresh
 fi
 export HOME=/home/discourse
 export USER=discourse

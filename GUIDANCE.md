@@ -4,9 +4,9 @@ What Wodby sets up for a Discourse application on this service. Check it before 
 
 ## How the application is built and run
 
-- The image is built from the connected repository, which must be a Discourse source tree (upstream Discourse or a fork), with the `Dockerfile` of this service on top of the official `discourse/base` web-only image. The build installs Ruby and JavaScript dependencies and precompiles assets.
+- The image is built from the connected repository, which must be a Discourse source tree (upstream Discourse or a fork), with the `Dockerfile` of this service on top of the official `discourse/base` web-only image. The build installs Ruby and JavaScript dependencies, downloads the frontend that Discourse publishes for the release, and compresses the assets. When the repository's frontend differs from the release, the build compiles the frontend itself, which takes considerably longer.
 - One container runs nginx on port 80, Unicorn and Sidekiq. The service is not scalable.
-- On every start the container runs `rake db:migrate` while `MIGRATE_ON_BOOT` is `1`, and `rake themes:update assets:precompile` while `PRECOMPILE_ON_BOOT` is `1`. Both are set to `1`.
+- On every start the container runs `rake db:migrate` while `MIGRATE_ON_BOOT` is `1`, and `rake themes:update assets:precompile:css maxminddb:refresh` while `PRECOMPILE_ON_BOOT` is `1`. Both are set to `1`.
 - The health endpoint is `/srv/status` on port 80.
 
 ## Generated configuration
