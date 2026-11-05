@@ -1,10 +1,11 @@
 # Discourse on Wodby
 
-What Wodby sets up for a Discourse application on this service. Check it before adding database, Redis, mail or host settings to the code or to the site settings.
+What Wodby sets up for a Discourse application on this service. Check it before adding database, Redis, mail or host settings to the site settings.
 
 ## How the application is built and run
 
-- The image is built from the connected repository, which must be a Discourse source tree (upstream Discourse or a fork), with the `Dockerfile` of this service on top of the official `discourse/base` web-only image. The build installs Ruby and JavaScript dependencies, downloads the frontend that Discourse publishes for the release, and compresses the assets. When the repository's frontend differs from the release, the build compiles the frontend itself, which takes considerably longer.
+- The service runs the prebuilt [wodby/discourse](https://github.com/wodby/discourse) image of the selected release line: `2026.10` (the monthly release) or `2026.7` (the extended support release). Each image holds one Discourse release on the official `discourse/base` web-only image, with its frontend and compressed assets. There is no repository and no build.
+- Plugins bundled with Discourse, such as chat, AI, solved, assign, reactions and voting, are available. Themes and theme components are installed from the administration interface. Other plugins need a custom build and are not supported.
 - One container runs nginx on port 80, Unicorn and Sidekiq. The service is not scalable.
 - On every start the container runs `rake db:migrate` while `MIGRATE_ON_BOOT` is `1`, and `rake themes:update assets:precompile:css maxminddb:refresh` while `PRECOMPILE_ON_BOOT` is `1`. Both are set to `1`.
 - The health endpoint is `/srv/status` on port 80.
@@ -37,7 +38,7 @@ Set the two settings above on the service. Other upstream `DISCOURSE_*` settings
 
 - The `data` volume is mounted at `/shared`: uploads (`/shared/uploads`), backups (`/shared/backups`) and Rails logs (`/shared/log/rails`). `public/uploads` and `public/backups` in the application are links to it.
 - The declared backup runs Discourse's own backup (`discourse backup`), one `tar.gz` with the database and the uploads.
-- Discourse is upgraded by building a newer Git ref, not from the administration interface.
+- Discourse is upgraded by a newer image: a new revision of the same release line brings its patch releases, and a newer release line is a different version of the service. Do not upgrade from the administration interface or install `docker_manager`.
 
 ## Check the result
 

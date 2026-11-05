@@ -1,21 +1,23 @@
 # Discourse service for Kubernetes on Wodby
 
-Build and run [Discourse](https://www.discourse.org/) applications on Kubernetes with Wodby.
+Run [Discourse](https://www.discourse.org/) on Kubernetes with Wodby.
 
-This service uses the same connected-build model as other Wodby application services. Wodby CI clones the selected Discourse source, builds it on the official `discourse/base` web-only image, and deploys the resulting application image. Wodby does not maintain a separate Discourse runtime image.
+The service runs the prebuilt [wodby/discourse](https://github.com/wodby/discourse) image: one Discourse release on the official `discourse/base` web-only image, with its frontend and compressed assets. There is no repository and no build.
 
-## Build sources
+## Versions
 
-The service offers two upstream build boilerplates:
+- Discourse `2026.10`, the monthly release (default)
+- Discourse `2026.7`, the extended support release (ESR)
 
-- Discourse `2026.10` stable
-- Discourse `2026.7` ESR
+A new image revision of a release line brings its patch releases.
 
-Each Discourse version option uses a `discourse/base` web-only image whose Ruby and JavaScript dependencies match that release line, so a build installs only what the selected source changes.
+## Plugins and themes
 
-Each boilerplate uses the pipeline in this repository. A compatible fork or custom Discourse source can also be connected directly.
+Plugins bundled with Discourse, such as chat, AI, solved, assign, reactions and voting, are available. Themes and theme components are installed from the administration interface. Other plugins need a custom build and are not supported.
 
-The build installs the selected source's Ruby and JavaScript dependencies, downloads the frontend that Discourse publishes for the release, compresses the assets, and adds the runtime lifecycle required by Wodby. A source whose frontend differs from the release, such as a fork with frontend changes, builds its own frontend instead, which takes considerably longer. The final image remains derived from the official Discourse base image.
+## Upgrading from 1.x
+
+Version 1.x built Discourse from a connected repository. Existing applications keep 1.x and its builds, because a new major version is never applied automatically. To move to the prebuilt image, create a new application from the Discourse stack and restore a Discourse backup into it.
 
 ## Runtime model
 
@@ -41,4 +43,4 @@ The default `/shared` volume is 20 GiB. The native Discourse backup includes the
 
 ## Upgrades
 
-Upgrade by rebuilding from a newer supported Discourse Git ref. Do not install `docker_manager` or run an in-place application upgrade from the Discourse administration interface.
+Discourse is upgraded by a newer image: a new revision of the same release line, or a newer release line. Do not install `docker_manager` or run an in-place application upgrade from the Discourse administration interface.
