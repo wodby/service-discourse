@@ -1,9 +1,0 @@
-.git
-.github
-.idea
-.vscode
-.DS_Store
-log/*
-node_modules
-tmp/*
-vendor/bundle

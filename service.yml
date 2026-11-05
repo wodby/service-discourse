@@ -9,16 +9,15 @@ labels:
 - discourse
 - forum
 
+# The prebuilt wodby/discourse image of each release line: the monthly
+# release and the extended support release (ESR).
 options:
 - version: '2026.10'
-  tag: 2.0.20261028-0019-web-only
+  tag: 2026.10-r0
   default: true
   eol: '2026-12-29T00:00:00+00:00'
-- version: '2026.8'
-  tag: 2.0.20260812-0036-web-only-stable
-  eol: '2026-10-27T00:00:00+00:00'
 - version: '2026.7'
-  tag: 2.0.20261028-0019-web-only-stable
+  tag: 2026.7-r0
   eol: '2027-03-30T00:00:00+00:00'
 
 endpoints:
@@ -147,25 +146,6 @@ backups:
     filepath: /shared/backups/wodby-discourse.tar.gz
     extension: tar.gz
 
-build:
-  dockerfile: Dockerfile
-  dockerignore: .dockerignore
-  connect: true
-  boilerplates:
-  - name: stable
-    title: Discourse stable
-    repo: https://github.com/discourse/discourse
-    tag: ~2026.10
-    pipeline: pipeline.yml
-    optionVersionConstraint: ~2026.10
-    default: true
-  - name: esr
-    title: Discourse ESR
-    repo: https://github.com/discourse/discourse
-    tag: ~2026.7
-    pipeline: pipeline.yml
-    optionVersionConstraint: ~2026.7
-
 deployment:
   strategy: rolling
   minReady: 10s
@@ -238,8 +218,7 @@ workloads:
     volumes: extraVolumes
   containers:
   - name: discourse
-    image: discourse/base
-    build: true
+    image: wodby/discourse
     helm:
       resources: resources
       env: envVars
