@@ -13,6 +13,7 @@ options:
 - version: '2026.10'
   tag: 2.0.20261028-0019-web-only
   default: true
+  eol: '2026-12-29T00:00:00+00:00'
 - version: '2026.8'
   tag: 2.0.20260812-0036-web-only-stable
   eol: '2026-10-27T00:00:00+00:00'
@@ -174,7 +175,7 @@ helm:
   name: wodby
   source: oci://registry-1.docker.io/wodby/stateful
   chart: oci://registry-1.docker.io/wodby/stateful
-  version: 0.2.0
+  version: 0.4.0
   valueMappings:
     replicas: replicaCount
     fullnameOverride: fullnameOverride
