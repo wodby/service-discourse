@@ -219,6 +219,10 @@ workloads:
   containers:
   - name: discourse
     image: wodby/discourse
+    resources:
+      request:
+        cpu: 310
+        memory: 576
     helm:
       resources: resources
       env: envVars
