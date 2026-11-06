@@ -13,11 +13,11 @@ labels:
 # release and the extended support release (ESR).
 options:
 - version: '2026.10'
-  tag: 2026.10-r1
+  tag: 2026.10-r3
   default: true
   eol: '2026-12-29T00:00:00+00:00'
 - version: '2026.7'
-  tag: 2026.7-r1
+  tag: 2026.7-r3
   eol: '2027-03-30T00:00:00+00:00'
 
 endpoints:
@@ -36,13 +36,15 @@ endpoints:
 settings:
 - name: developer_emails
   title: Administrator email addresses
-  description: Comma-separated email addresses that receive initial Discourse administrator access
+  description: Comma-separated email addresses that receive initial Discourse 
+    administrator access
   placeholder: admin@example.com
   required: true
   var: DISCOURSE_DEVELOPER_EMAILS
 - name: notification_email
   title: Notification email address
-  description: Optional From address for Discourse system email; its domain should have valid SPF, DKIM, and reverse DNS
+  description: Optional From address for Discourse system email; its domain 
+    should have valid SPF, DKIM, and reverse DNS
   placeholder: noreply@example.com
   var: DISCOURSE_NOTIFICATION_EMAIL
 
