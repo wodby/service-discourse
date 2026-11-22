@@ -13,13 +13,13 @@ labels:
 # release and the extended support release (ESR).
 options:
 - version: '2026.10'
-  tag: 2026.10-r16
-  digest: sha256:67b14de6cb664227e6e0f19e965aafc6cd80f710562721d89d108fe20d660a90
+  tag: 2026.10-r17
+  digest: sha256:bf5a885cf0afdc038c51e6dea372db3deca5630ee075178ce6693aa3c0679a35
   default: true
   eol: '2026-12-29T00:00:00+00:00'
 - version: '2026.7'
-  tag: 2026.7-r16
-  digest: sha256:bdeecdcb0f12ffc7a49717adbd4316e173ed053d9a268f1ecb46984fa518df70
+  tag: 2026.7-r17
+  digest: sha256:4cda2310233f047f1305a63376c7fc53cc9c1365cfbb916bd9f2c036ffbbff3f
   eol: '2027-03-30T00:00:00+00:00'
 
 endpoints:
